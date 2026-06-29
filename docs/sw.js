@@ -38,3 +38,45 @@ self.addEventListener('message', (e) => {
   }
 });
  
+export default {
+  async fetch(request) {
+    // The main origin (your Lovable backend)
+    const mainOrigin = 'https://www.fs-africa.org.ng/site/gabulk-fashion-studio';
+    // The fallback backup (your GitHub Pages subdomain)
+    const fallbackOrigin = 'https://gabulk.gabulkfashionstudio.org.ng';
+
+    // Copy the request headers so we don't lose anything
+    const headers = new Headers(request.headers);
+
+    try {
+      // Step 1: Try to fetch from the main Lovable backend
+      const mainResponse = await fetch(mainOrigin, {
+        method: request.method,
+        headers: headers,
+      });
+
+      // Step 2: If the main server returns a 5xx error (server failure)
+      if (mainResponse.status >= 500 && mainResponse.status < 600) {
+        // Fallback: fetch from the GitHub Pages subdomain instead
+        const fallbackResponse = await fetch(fallbackOrigin, {
+          method: request.method,
+          headers: headers,
+        });
+        // Return the backup content, but keep the original URL in the browser
+        return fallbackResponse;
+      }
+
+      // Step 3: If everything is fine, return the main response
+      return mainResponse;
+
+    } catch (error) {
+      // Step 4: If the main origin is completely offline (network error, timeout)
+      // Fallback to the subdomain
+      const fallbackResponse = await fetch(fallbackOrigin, {
+        method: request.method,
+        headers: headers,
+      });
+      return fallbackResponse;
+    }
+  }
+};
